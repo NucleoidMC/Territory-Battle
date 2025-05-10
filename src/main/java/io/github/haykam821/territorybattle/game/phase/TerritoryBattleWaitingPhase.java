@@ -1,5 +1,7 @@
 package io.github.haykam821.territorybattle.game.phase;
 
+import java.util.Set;
+
 import eu.pb4.polymer.virtualentity.api.ElementHolder;
 import eu.pb4.polymer.virtualentity.api.attachment.ChunkAttachment;
 import eu.pb4.polymer.virtualentity.api.attachment.HolderAttachment;
@@ -10,19 +12,20 @@ import io.github.haykam821.territorybattle.game.map.TerritoryBattleMapBuilder;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
-import xyz.nucleoid.plasmid.game.GameOpenContext;
-import xyz.nucleoid.plasmid.game.GameOpenProcedure;
-import xyz.nucleoid.plasmid.game.GameResult;
-import xyz.nucleoid.plasmid.game.GameSpace;
-import xyz.nucleoid.plasmid.game.common.GameWaitingLobby;
-import xyz.nucleoid.plasmid.game.event.GameActivityEvents;
-import xyz.nucleoid.plasmid.game.event.GamePlayerEvents;
-import xyz.nucleoid.plasmid.game.player.PlayerOffer;
-import xyz.nucleoid.plasmid.game.player.PlayerOfferResult;
+import xyz.nucleoid.plasmid.api.game.GameOpenContext;
+import xyz.nucleoid.plasmid.api.game.GameOpenProcedure;
+import xyz.nucleoid.plasmid.api.game.GameResult;
+import xyz.nucleoid.plasmid.api.game.GameSpace;
+import xyz.nucleoid.plasmid.api.game.common.GameWaitingLobby;
+import xyz.nucleoid.plasmid.api.game.event.GameActivityEvents;
+import xyz.nucleoid.plasmid.api.game.event.GamePlayerEvents;
+import xyz.nucleoid.plasmid.api.game.player.JoinAcceptor;
+import xyz.nucleoid.plasmid.api.game.player.JoinAcceptorResult;
+import xyz.nucleoid.plasmid.api.game.player.JoinOffer;
+import xyz.nucleoid.stimuli.event.EventResult;
 import xyz.nucleoid.stimuli.event.player.PlayerDeathEvent;
 
 public class TerritoryBattleWaitingPhase {
@@ -56,7 +59,8 @@ public class TerritoryBattleWaitingPhase {
 
 			// Listeners
 			activity.listen(GameActivityEvents.ENABLE, phase::onEnable);
-			activity.listen(GamePlayerEvents.OFFER, phase::offerPlayer);
+			activity.listen(GamePlayerEvents.ACCEPT, phase::onAcceptPlayers);
+			activity.listen(GamePlayerEvents.OFFER, JoinOffer::accept);
 			activity.listen(PlayerDeathEvent.EVENT, phase::onPlayerDeath);
 			activity.listen(GameActivityEvents.REQUEST_START, phase::requestStart);
 		});
@@ -72,9 +76,9 @@ public class TerritoryBattleWaitingPhase {
 		}
 	}
 
-	private PlayerOfferResult offerPlayer(PlayerOffer offer) {
-		return offer.accept(this.world, this.map.getWaitingSpawnPos()).and(() -> {
-			offer.player().changeGameMode(GameMode.SPECTATOR);
+	private JoinAcceptorResult onAcceptPlayers(JoinAcceptor acceptor) {
+		return acceptor.teleport(this.world, this.map.getWaitingSpawnPos()).thenRunForEach(player -> {
+			player.changeGameMode(GameMode.SPECTATOR);
 		});
 	}
 
@@ -83,14 +87,14 @@ public class TerritoryBattleWaitingPhase {
 		return GameResult.ok();
 	}
 
-	private ActionResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
+	private EventResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
 		// Respawn player
 		TerritoryBattleWaitingPhase.spawn(this.world, this.map, player);
-		return ActionResult.SUCCESS;
+		return EventResult.DENY;
 	}
 
 	public static void spawn(ServerWorld world, TerritoryBattleMap map, ServerPlayerEntity player) {
 		Vec3d spawnPos = map.getWaitingSpawnPos();
-		player.teleport(world, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ(), 0, 0);
+		player.teleport(world, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ(), Set.of(), 0, 0, true);
 	}
 }

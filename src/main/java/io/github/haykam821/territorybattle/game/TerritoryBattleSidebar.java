@@ -6,8 +6,8 @@ import io.github.haykam821.territorybattle.game.phase.TerritoryBattleActivePhase
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import xyz.nucleoid.plasmid.game.common.GlobalWidgets;
-import xyz.nucleoid.plasmid.game.common.widget.SidebarWidget;
+import xyz.nucleoid.plasmid.api.game.common.GlobalWidgets;
+import xyz.nucleoid.plasmid.api.game.common.widget.SidebarWidget;
 
 public class TerritoryBattleSidebar {
 	protected static final Style NAME_STYLE = Style.EMPTY

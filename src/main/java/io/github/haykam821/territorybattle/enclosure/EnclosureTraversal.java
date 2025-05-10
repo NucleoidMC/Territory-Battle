@@ -1,26 +1,20 @@
 package io.github.haykam821.territorybattle.enclosure;
 
-import io.github.haykam821.territorybattle.mixin.BlockTraversalConnectivityAccessor;
 import net.minecraft.block.BlockState;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import xyz.nucleoid.map_templates.BlockBounds;
-import xyz.nucleoid.plasmid.util.BlockTraversal;
-import xyz.nucleoid.plasmid.util.BlockTraversal.Connectivity;
-import xyz.nucleoid.plasmid.util.BlockTraversal.Result;
+import xyz.nucleoid.plasmid.api.util.BlockTraversal;
+import xyz.nucleoid.plasmid.api.util.BlockTraversal.Connectivity;
+import xyz.nucleoid.plasmid.api.util.BlockTraversal.Result;
 
 /**
  * Generic utilities for determining whether a floor region is enclosed by a certain block state.
  */
 public final class EnclosureTraversal {
-	private static final Connectivity FOUR = BlockTraversalConnectivityAccessor.territorybattle$create(consumer -> {
-		for (Direction direction : Direction.Type.HORIZONTAL) {
-			consumer.accept(direction.getVector());
-		}
-	});
-
-	private static final BlockTraversal TRAVERSAL = BlockTraversal.create().connectivity(FOUR);
+	private static final Connectivity CONNECTIVITY = Connectivity.four(Direction.Axis.Y);
+	private static final BlockTraversal TRAVERSAL = BlockTraversal.create().connectivity(CONNECTIVITY);
 
 	private EnclosureTraversal() {
 		return;

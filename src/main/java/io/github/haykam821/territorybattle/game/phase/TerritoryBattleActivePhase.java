@@ -1,6 +1,7 @@
 package io.github.haykam821.territorybattle.game.phase;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
@@ -24,24 +25,25 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
-import xyz.nucleoid.plasmid.game.GameActivity;
-import xyz.nucleoid.plasmid.game.GameCloseReason;
-import xyz.nucleoid.plasmid.game.GameSpace;
-import xyz.nucleoid.plasmid.game.common.GlobalWidgets;
-import xyz.nucleoid.plasmid.game.common.widget.BossBarWidget;
-import xyz.nucleoid.plasmid.game.event.GameActivityEvents;
-import xyz.nucleoid.plasmid.game.event.GamePlayerEvents;
-import xyz.nucleoid.plasmid.game.player.PlayerOffer;
-import xyz.nucleoid.plasmid.game.player.PlayerOfferResult;
-import xyz.nucleoid.plasmid.game.rule.GameRuleType;
-import xyz.nucleoid.plasmid.util.PlayerRef;
+import xyz.nucleoid.plasmid.api.game.GameActivity;
+import xyz.nucleoid.plasmid.api.game.GameCloseReason;
+import xyz.nucleoid.plasmid.api.game.GameSpace;
+import xyz.nucleoid.plasmid.api.game.common.GlobalWidgets;
+import xyz.nucleoid.plasmid.api.game.common.widget.BossBarWidget;
+import xyz.nucleoid.plasmid.api.game.event.GameActivityEvents;
+import xyz.nucleoid.plasmid.api.game.event.GamePlayerEvents;
+import xyz.nucleoid.plasmid.api.game.player.JoinAcceptor;
+import xyz.nucleoid.plasmid.api.game.player.JoinAcceptorResult;
+import xyz.nucleoid.plasmid.api.game.player.JoinOffer;
+import xyz.nucleoid.plasmid.api.game.rule.GameRuleType;
+import xyz.nucleoid.plasmid.api.util.PlayerRef;
+import xyz.nucleoid.stimuli.event.EventResult;
 import xyz.nucleoid.stimuli.event.player.PlayerDeathEvent;
 
 public class TerritoryBattleActivePhase {
@@ -118,7 +120,7 @@ public class TerritoryBattleActivePhase {
 		gameSpace.setActivity(activity -> {
 			GlobalWidgets widgets = GlobalWidgets.addTo(activity);
 
-			List<PlayerTerritory> territories = TerritoryBattleActivePhase.getTerritories(gameSpace.getPlayers(), config.getPlayerBlocks());
+			List<PlayerTerritory> territories = TerritoryBattleActivePhase.getTerritories(gameSpace.getPlayers().participants(), config.getPlayerBlocks());
 
 			TerritoryBattleActivePhase phase = new TerritoryBattleActivePhase(gameSpace, world, map, config, guideText, territories, widgets);
 
@@ -127,7 +129,8 @@ public class TerritoryBattleActivePhase {
 			// Listeners
 			activity.listen(GameActivityEvents.ENABLE, phase::enable);
 			activity.listen(GameActivityEvents.TICK, phase::tick);
-			activity.listen(GamePlayerEvents.OFFER, phase::offerPlayer);
+			activity.listen(GamePlayerEvents.ACCEPT, phase::onAcceptPlayers);
+			activity.listen(GamePlayerEvents.OFFER, JoinOffer::acceptSpectators);
 			activity.listen(PlayerDeathEvent.EVENT, phase::onPlayerDeath);
 		});
 	}
@@ -159,6 +162,11 @@ public class TerritoryBattleActivePhase {
 				this.world.setBlockState(player.getBlockPos().down(), territory.getTerritoryState());
 				this.availableTerritory -= 1;
 			}
+		}
+
+		for (ServerPlayerEntity player : this.gameSpace.getPlayers().spectators()) {
+			TerritoryBattleWaitingPhase.spawn(this.world, this.map, player);
+			this.setSpectator(player);
 		}
 
 		this.sidebar.update();
@@ -297,16 +305,16 @@ public class TerritoryBattleActivePhase {
 		player.changeGameMode(GameMode.SPECTATOR);
 	}
 
-	private PlayerOfferResult offerPlayer(PlayerOffer offer) {
-		return offer.accept(this.world, this.map.getWaitingSpawnPos()).and(() -> {
-			this.setSpectator(offer.player());
+	private JoinAcceptorResult onAcceptPlayers(JoinAcceptor acceptor) {
+		return acceptor.teleport(this.world, this.map.getWaitingSpawnPos()).thenRunForEach(player -> {
+			this.setSpectator(player);
 		});
 	}
 
-	private ActionResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
+	private EventResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
 		// Respawn player
 		TerritoryBattleWaitingPhase.spawn(this.world, this.map, player);
-		return ActionResult.SUCCESS;
+		return EventResult.ALLOW;
 	}
 
 	public void spawn(ServerPlayerEntity player, double theta, double distance) {
@@ -315,7 +323,7 @@ public class TerritoryBattleActivePhase {
 		double x = center.getX() + Math.sin(theta) * distance;
 		double z = center.getZ() - Math.cos(theta) * distance;
 
-		player.teleport(this.world, Math.floor(x) + 0.5, 1, Math.floor(z) + 0.5, (float) Math.toDegrees(theta), 0);
+		player.teleport(this.world, Math.floor(x) + 0.5, 1, Math.floor(z) + 0.5, Set.of(), (float) Math.toDegrees(theta), 0, true);
 	}
 
 	public ServerWorld getWorld() {

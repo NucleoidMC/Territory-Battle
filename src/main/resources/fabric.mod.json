@@ -16,13 +16,11 @@
 			"io.github.haykam821.territorybattle.Main"
 		]
 	},
-	"mixins": [
-		"territorybattle.mixin.json"
-	],
 	"license": "MIT",
 	"icon": "assets/territorybattle/icon.png",
 	"depends": {
 		"fabricloader": ">=0.4.0",
-		"plasmid": ">=0.5.0"
+		"java": ">=21",
+		"plasmid": ">=0.6.1"
 	}
 }
