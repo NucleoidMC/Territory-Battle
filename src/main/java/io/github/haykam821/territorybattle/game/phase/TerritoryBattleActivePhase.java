@@ -226,7 +226,7 @@ public class TerritoryBattleActivePhase {
 	private boolean tickTerritory(PlayerTerritory territory, ServerPlayerEntity player) {
 		boolean territoryUpdated = false;
 
-		Vec3d start = new Vec3d(player.prevX, player.prevY - MathHelper.EPSILON, player.prevZ);
+		Vec3d start = new Vec3d(player.lastX, player.lastY - MathHelper.EPSILON, player.lastZ);
 		Vec3d end = territory.getPreviousPos(player).subtract(0, MathHelper.EPSILON, 0);
 
 		if (!start.equals(end)) {
