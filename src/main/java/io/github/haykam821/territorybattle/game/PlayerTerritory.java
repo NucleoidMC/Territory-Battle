@@ -1,22 +1,22 @@
 package io.github.haykam821.territorybattle.game;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.scoreboard.number.FixedNumberFormat;
-import net.minecraft.scoreboard.number.NumberFormat;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.chat.numbers.FixedFormat;
+import net.minecraft.network.chat.numbers.NumberFormat;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.plasmid.api.util.PlayerRef;
 
 public class PlayerTerritory implements Comparable<PlayerTerritory> {
 	private final PlayerRef playerRef;
 	private final BlockState territoryState;
 
-	private Vec3d previousPos;
+	private Vec3 previousPos;
 	private int size = 0;
 
 	public PlayerTerritory(PlayerRef playerRef, BlockState territoryState) {
@@ -32,7 +32,7 @@ public class PlayerTerritory implements Comparable<PlayerTerritory> {
 		return this.territoryState;
 	}
 
-	public Vec3d getPreviousPos(ServerPlayerEntity player) {
+	public Vec3 getPreviousPos(ServerPlayer player) {
 		if (this.previousPos == null) {
 			this.updatePreviousPos(player);
 		}
@@ -40,8 +40,8 @@ public class PlayerTerritory implements Comparable<PlayerTerritory> {
 		return this.previousPos;
 	}
 
-	public void updatePreviousPos(ServerPlayerEntity player) {
-		this.previousPos = player.getPos();
+	public void updatePreviousPos(ServerPlayer player) {
+		this.previousPos = player.position();
 	}
 
 	public void incrementSize() {
@@ -52,37 +52,37 @@ public class PlayerTerritory implements Comparable<PlayerTerritory> {
 		return new ItemStack(this.territoryState.getBlock());
 	}
 
-	public void giveTerritoryStack(ServerPlayerEntity player) {
-		player.getInventory().setStack(8, this.getTerritoryStack());
+	public void giveTerritoryStack(ServerPlayer player) {
+		player.getInventory().setItem(8, this.getTerritoryStack());
 
 		// Update inventory
-		player.currentScreenHandler.sendContentUpdates();
-		player.playerScreenHandler.onContentChanged(player.getInventory());
+		player.containerMenu.broadcastChanges();
+		player.inventoryMenu.slotsChanged(player.getInventory());
 	}
 
-	public Text getWinMessage(ServerWorld world) {
-		PlayerEntity winner = this.getPlayerRef().getEntity(world);
+	public Component getWinMessage(ServerLevel level) {
+		Player winner = this.getPlayerRef().getEntity(level);
 		if (winner == null) {
-			return Text.literal("The winner is offline!").formatted(Formatting.GOLD);
+			return Component.literal("The winner is offline!").withStyle(ChatFormatting.GOLD);
 		}
 
 		return winner.getDisplayName().copy()
 			.append(" has won the game with a territory of " + this.size + " blocks!")
-			.formatted(Formatting.GOLD);
+			.withStyle(ChatFormatting.GOLD);
 	}
 
-	private String getSidebarEntryName(ServerWorld world) {
-		PlayerEntity player = this.getPlayerRef().getEntity(world);
-		return player == null ? "<Unknown>" : player.getNameForScoreboard();
+	private String getSidebarEntryName(ServerLevel level) {
+		Player player = this.getPlayerRef().getEntity(level);
+		return player == null ? "<Unknown>" : player.getScoreboardName();
 	}
 
-	public Text getSidebarEntryText(ServerWorld world) {
-		return Text.literal(this.getSidebarEntryName(world)).setStyle(TerritoryBattleSidebar.NAME_STYLE);
+	public Component getSidebarEntryText(ServerLevel level) {
+		return Component.literal(this.getSidebarEntryName(level)).setStyle(TerritoryBattleSidebar.NAME_STYLE);
 	}
 
 	public NumberFormat getSidebarNumberFormat() {
-		Text text = Text.literal(this.size + "").setStyle(TerritoryBattleSidebar.NUMBER_STYLE);
-		return new FixedNumberFormat(text);
+		Component text = Component.literal(this.size + "").setStyle(TerritoryBattleSidebar.NUMBER_STYLE);
+		return new FixedFormat(text);
 	}
 
 	@Override

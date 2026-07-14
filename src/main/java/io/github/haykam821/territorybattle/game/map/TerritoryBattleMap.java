@@ -1,12 +1,12 @@
 package io.github.haykam821.territorybattle.game.map;
 
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.map_templates.MapTemplate;
-import xyz.nucleoid.plasmid.api.game.world.generator.TemplateChunkGenerator;
+import xyz.nucleoid.plasmid.api.game.level.generator.TemplateChunkGenerator;
 
 public class TerritoryBattleMap {
 	private final MapTemplate template;
@@ -14,8 +14,8 @@ public class TerritoryBattleMap {
 	private final BlockBounds platform;
 	private final BlockBounds territoryBounds;
 
-	private final Vec3d guideTextPos;
-	private final Vec3d waitingSpawnPos;
+	private final Vec3 guideTextPos;
+	private final Vec3 waitingSpawnPos;
 
 	public TerritoryBattleMap(MapTemplate template, BlockBounds platform) {
 		this.template = template;
@@ -37,11 +37,11 @@ public class TerritoryBattleMap {
 		return this.territoryBounds;
 	}
 
-	public Vec3d getGuideTextPos() {
+	public Vec3 getGuideTextPos() {
 		return this.guideTextPos;
 	}
 
-	public Vec3d getWaitingSpawnPos() {
+	public Vec3 getWaitingSpawnPos() {
 		return this.waitingSpawnPos;
 	}
 
@@ -49,12 +49,12 @@ public class TerritoryBattleMap {
 		return new TemplateChunkGenerator(server, this.template);
 	}
 
-	private Vec3d createCenterPos(double offsetY, double offsetZ) {
-		Vec3d center = this.getPlatform().centerBottom();
+	private Vec3 createCenterPos(double offsetY, double offsetZ) {
+		Vec3 center = this.getPlatform().centerBottom();
 
 		double maxOffsetZ = this.platform.size().getZ() / 2 - 0.5;
-		double clampedOffsetZ = MathHelper.clamp(offsetZ, -maxOffsetZ, maxOffsetZ);
+		double clampedOffsetZ = Mth.clamp(offsetZ, -maxOffsetZ, maxOffsetZ);
 
-		return new Vec3d(center.getX(), center.getY() + offsetY, center.getZ() - clampedOffsetZ);
+		return new Vec3(center.x(), center.y() + offsetY, center.z() - clampedOffsetZ);
 	}
 }

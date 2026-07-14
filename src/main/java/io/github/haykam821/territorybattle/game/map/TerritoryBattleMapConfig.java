@@ -3,18 +3,18 @@ package io.github.haykam821.territorybattle.game.map;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
 
 public class TerritoryBattleMapConfig {
 	public static final Codec<TerritoryBattleMapConfig> CODEC = RecordCodecBuilder.create(instance -> {
 		return instance.group(
 			Codec.INT.fieldOf("x").forGetter(map -> map.x),
 			Codec.INT.fieldOf("z").forGetter(map -> map.z),
-			BlockState.CODEC.optionalFieldOf("floor", Blocks.WHITE_WOOL.getDefaultState()).forGetter(TerritoryBattleMapConfig::getFloor),
-			BlockState.CODEC.optionalFieldOf("floor_outline", Blocks.SPRUCE_PLANKS.getDefaultState()).forGetter(TerritoryBattleMapConfig::getFloorOutline),
-			BlockState.CODEC.optionalFieldOf("wall", Blocks.COBBLESTONE_WALL.getDefaultState()).forGetter(TerritoryBattleMapConfig::getWall),
-			BlockState.CODEC.optionalFieldOf("wall_top", Blocks.SPRUCE_SLAB.getDefaultState()).forGetter(TerritoryBattleMapConfig::getWallTop)
+			BlockState.CODEC.optionalFieldOf("floor", Blocks.WOOL.white().defaultBlockState()).forGetter(TerritoryBattleMapConfig::getFloor),
+			BlockState.CODEC.optionalFieldOf("floor_outline", Blocks.SPRUCE_PLANKS.defaultBlockState()).forGetter(TerritoryBattleMapConfig::getFloorOutline),
+			BlockState.CODEC.optionalFieldOf("wall", Blocks.COBBLESTONE_WALL.defaultBlockState()).forGetter(TerritoryBattleMapConfig::getWall),
+			BlockState.CODEC.optionalFieldOf("wall_top", Blocks.SPRUCE_SLAB.defaultBlockState()).forGetter(TerritoryBattleMapConfig::getWallTop)
 		).apply(instance, TerritoryBattleMapConfig::new);
 	});
 
