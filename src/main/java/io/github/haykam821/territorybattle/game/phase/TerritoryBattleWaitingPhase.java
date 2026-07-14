@@ -9,12 +9,12 @@ import io.github.haykam821.territorybattle.game.TerritoryBattleConfig;
 import io.github.haykam821.territorybattle.game.map.TerritoryBattleGuideText;
 import io.github.haykam821.territorybattle.game.map.TerritoryBattleMap;
 import io.github.haykam821.territorybattle.game.map.TerritoryBattleMapBuilder;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameMode;
-import xyz.nucleoid.fantasy.RuntimeWorldConfig;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.GameType;
+import xyz.nucleoid.fantasy.RuntimeLevelConfig;
 import xyz.nucleoid.plasmid.api.game.GameOpenContext;
 import xyz.nucleoid.plasmid.api.game.GameOpenProcedure;
 import xyz.nucleoid.plasmid.api.game.GameResult;
@@ -30,15 +30,15 @@ import xyz.nucleoid.stimuli.event.player.PlayerDeathEvent;
 
 public class TerritoryBattleWaitingPhase {
 	private final GameSpace gameSpace;
-	private final ServerWorld world;
+	private final ServerLevel level;
 	private final TerritoryBattleMap map;
 	private final TerritoryBattleConfig config;
 
 	private HolderAttachment guideText;
 
-	public TerritoryBattleWaitingPhase(GameSpace gameSpace, ServerWorld world, TerritoryBattleMap map, TerritoryBattleConfig config) {
+	public TerritoryBattleWaitingPhase(GameSpace gameSpace, ServerLevel level, TerritoryBattleMap map, TerritoryBattleConfig config) {
 		this.gameSpace = gameSpace;
-		this.world = world;
+		this.level = level;
 		this.map = map;
 		this.config = config;
 	}
@@ -47,11 +47,11 @@ public class TerritoryBattleWaitingPhase {
 		TerritoryBattleMapBuilder mapBuilder = new TerritoryBattleMapBuilder(context.config());
 
 		TerritoryBattleMap map = mapBuilder.create();
-		RuntimeWorldConfig worldConfig = new RuntimeWorldConfig()
+		RuntimeLevelConfig levelConfig = new RuntimeLevelConfig()
 			.setGenerator(map.createGenerator(context.server()));
 
-		return context.openWithWorld(worldConfig, (activity, world) -> {
-			TerritoryBattleWaitingPhase phase = new TerritoryBattleWaitingPhase(activity.getGameSpace(), world, map, context.config());
+		return context.openWithLevel(levelConfig, (activity, level) -> {
+			TerritoryBattleWaitingPhase phase = new TerritoryBattleWaitingPhase(activity.getGameSpace(), level, map, context.config());
 
 			GameWaitingLobby.addTo(activity, context.config().getPlayerConfig());
 
@@ -68,33 +68,33 @@ public class TerritoryBattleWaitingPhase {
 
 	private void onEnable() {
 		// Spawn guide text
-		Vec3d guideTextPos = this.map.getGuideTextPos();
+		Vec3 guideTextPos = this.map.getGuideTextPos();
 
 		if (guideTextPos != null) {
 			ElementHolder holder = TerritoryBattleGuideText.createElementHolder();
-			this.guideText = ChunkAttachment.of(holder, world, guideTextPos);
+			this.guideText = ChunkAttachment.of(holder, level, guideTextPos);
 		}
 	}
 
 	private JoinAcceptorResult onAcceptPlayers(JoinAcceptor acceptor) {
-		return acceptor.teleport(this.world, this.map.getWaitingSpawnPos()).thenRunForEach(player -> {
-			player.changeGameMode(GameMode.SPECTATOR);
+		return acceptor.teleport(this.level, this.map.getWaitingSpawnPos()).thenRunForEach(player -> {
+			player.setGameMode(GameType.SPECTATOR);
 		});
 	}
 
 	private GameResult requestStart() {
-		TerritoryBattleActivePhase.open(this.gameSpace, this.world, this.map, this.config, this.guideText);
+		TerritoryBattleActivePhase.open(this.gameSpace, this.level, this.map, this.config, this.guideText);
 		return GameResult.ok();
 	}
 
-	private EventResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
+	private EventResult onPlayerDeath(ServerPlayer player, DamageSource source) {
 		// Respawn player
-		TerritoryBattleWaitingPhase.spawn(this.world, this.map, player);
+		TerritoryBattleWaitingPhase.spawn(this.level, this.map, player);
 		return EventResult.DENY;
 	}
 
-	public static void spawn(ServerWorld world, TerritoryBattleMap map, ServerPlayerEntity player) {
-		Vec3d spawnPos = map.getWaitingSpawnPos();
-		player.teleport(world, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ(), Set.of(), 0, 0, true);
+	public static void spawn(ServerLevel level, TerritoryBattleMap map, ServerPlayer player) {
+		Vec3 spawnPos = map.getWaitingSpawnPos();
+		player.teleportTo(level, spawnPos.x(), spawnPos.y(), spawnPos.z(), Set.of(), 0, 0, true);
 	}
 }

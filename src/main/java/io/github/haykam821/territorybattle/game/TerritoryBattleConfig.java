@@ -6,12 +6,13 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.github.haykam821.territorybattle.game.map.TerritoryBattleMapConfig;
 import net.minecraft.SharedConstants;
-import net.minecraft.block.Block;
-import net.minecraft.registry.RegistryCodecs;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntryList;
-import net.minecraft.util.math.intprovider.ConstantIntProvider;
-import net.minecraft.util.math.intprovider.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.core.RegistryCodecs;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.core.HolderSet;
+import net.minecraft.util.valueproviders.ConstantInt;
+import net.minecraft.util.valueproviders.IntProvider;
 import xyz.nucleoid.plasmid.api.game.common.config.WaitingLobbyConfig;
 
 public class TerritoryBattleConfig {
@@ -19,9 +20,9 @@ public class TerritoryBattleConfig {
 		return instance.group(
 			TerritoryBattleMapConfig.CODEC.fieldOf("map").forGetter(TerritoryBattleConfig::getMapConfig),
 			WaitingLobbyConfig.CODEC.fieldOf("players").forGetter(TerritoryBattleConfig::getPlayerConfig),
-			IntProvider.NON_NEGATIVE_CODEC.optionalFieldOf("guide_ticks", ConstantIntProvider.create(SharedConstants.TICKS_PER_SECOND * 5)).forGetter(TerritoryBattleConfig::getGuideTicks),
-			IntProvider.NON_NEGATIVE_CODEC.optionalFieldOf("ticks_until_close", ConstantIntProvider.create(SharedConstants.TICKS_PER_SECOND * 5)).forGetter(TerritoryBattleConfig::getTicksUntilClose),
-			RegistryCodecs.entryList(RegistryKeys.BLOCK).fieldOf("player_blocks").forGetter(TerritoryBattleConfig::getPlayerBlocks),
+			IntProviders.NON_NEGATIVE_CODEC.optionalFieldOf("guide_ticks", ConstantInt.of(SharedConstants.TICKS_PER_SECOND * 5)).forGetter(TerritoryBattleConfig::getGuideTicks),
+			IntProviders.NON_NEGATIVE_CODEC.optionalFieldOf("ticks_until_close", ConstantInt.of(SharedConstants.TICKS_PER_SECOND * 5)).forGetter(TerritoryBattleConfig::getTicksUntilClose),
+			RegistryCodecs.homogeneousList(Registries.BLOCK).fieldOf("player_blocks").forGetter(TerritoryBattleConfig::getPlayerBlocks),
 			Codec.BOOL.optionalFieldOf("flood_fill", true).forGetter(TerritoryBattleConfig::shouldFloodFill),
 			Codec.INT.optionalFieldOf("time", 20 * 90).forGetter(TerritoryBattleConfig::getTime)
 		).apply(instance, TerritoryBattleConfig::new);
@@ -31,11 +32,11 @@ public class TerritoryBattleConfig {
 	private final WaitingLobbyConfig playerConfig;
 	private final IntProvider guideTicks;
 	private final IntProvider ticksUntilClose;
-	private final RegistryEntryList<Block> playerBlocks;
+	private final HolderSet<Block> playerBlocks;
 	private final boolean floodFill;
 	private final int time;
 
-	public TerritoryBattleConfig(TerritoryBattleMapConfig mapConfig, WaitingLobbyConfig playerConfig, IntProvider guideTicks, IntProvider ticksUntilClose, RegistryEntryList<Block> playerBlocks, boolean floodFill, int time) {
+	public TerritoryBattleConfig(TerritoryBattleMapConfig mapConfig, WaitingLobbyConfig playerConfig, IntProvider guideTicks, IntProvider ticksUntilClose, HolderSet<Block> playerBlocks, boolean floodFill, int time) {
 		this.mapConfig = mapConfig;
 		this.playerConfig = playerConfig;
 		this.guideTicks = guideTicks;
@@ -61,7 +62,7 @@ public class TerritoryBattleConfig {
 		return this.ticksUntilClose;
 	}
 
-	public RegistryEntryList<Block> getPlayerBlocks() {
+	public HolderSet<Block> getPlayerBlocks() {
 		return this.playerBlocks;
 	}
 

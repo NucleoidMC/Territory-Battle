@@ -1,9 +1,9 @@
 package io.github.haykam821.territorybattle.enclosure;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.plasmid.api.util.BlockTraversal;
 import xyz.nucleoid.plasmid.api.util.BlockTraversal.Connectivity;
@@ -20,7 +20,7 @@ public final class EnclosureTraversal {
 		return;
 	}
 
-	public static EnclosureResult findEnclosure(ServerWorld world, BlockPos origin, BlockBounds bounds, BlockState outlineState, BlockState floorState) {
+	public static EnclosureResult findEnclosure(ServerLevel world, BlockPos origin, BlockBounds bounds, BlockState outlineState, BlockState floorState) {
 		EnclosureResult result = new EnclosureResult();
 
 		TRAVERSAL.accept(origin, (pos, fromPos, depth) -> {

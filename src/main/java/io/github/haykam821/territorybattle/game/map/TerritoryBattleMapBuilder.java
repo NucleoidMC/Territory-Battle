@@ -1,8 +1,8 @@
 package io.github.haykam821.territorybattle.game.map;
 
 import io.github.haykam821.territorybattle.game.TerritoryBattleConfig;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.BlockPos;
 import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.map_templates.MapTemplate;
 
@@ -17,7 +17,7 @@ public class TerritoryBattleMapBuilder {
 		MapTemplate template = MapTemplate.createEmpty();
 		TerritoryBattleMapConfig mapConfig = this.config.getMapConfig();
 
-		BlockBounds bounds = BlockBounds.of(BlockPos.ORIGIN, new BlockPos(mapConfig.x + 1, 2, mapConfig.z + 1));
+		BlockBounds bounds = BlockBounds.of(BlockPos.ZERO, new BlockPos(mapConfig.x + 1, 2, mapConfig.z + 1));
 		this.build(bounds, template, mapConfig);
 
 		return new TerritoryBattleMap(template, bounds);

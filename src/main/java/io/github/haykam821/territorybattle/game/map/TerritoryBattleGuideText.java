@@ -2,23 +2,23 @@ package io.github.haykam821.territorybattle.game.map;
 
 import eu.pb4.polymer.virtualentity.api.ElementHolder;
 import eu.pb4.polymer.virtualentity.api.elements.TextDisplayElement;
-import net.minecraft.entity.decoration.DisplayEntity.BillboardMode;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.world.entity.Display.BillboardConstraints;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 
 public final class TerritoryBattleGuideText {
-	private static final Text TITLE = Text.translatable("gameType.territorybattle.territory_battle").formatted(Formatting.BOLD);
+	private static final Component TITLE = Component.translatable("gameType.territorybattle.territory_battle").withStyle(ChatFormatting.BOLD);
 
-	private static final Text TEXT = Text.empty()
+	private static final Component TEXT = Component.empty()
 			.append(TITLE)
-			.append(ScreenTexts.LINE_BREAK)
+			.append(CommonComponents.NEW_LINE)
 			.append("Run over blocks to claim them as part of your territory.")
-			.append(ScreenTexts.LINE_BREAK)
+			.append(CommonComponents.NEW_LINE)
 			.append("Once a block is claimed, it cannot be claimed by another player.")
-			.append(ScreenTexts.LINE_BREAK)
+			.append(CommonComponents.NEW_LINE)
 			.append("Claim the most blocks before time runs out!")
-			.formatted(Formatting.GOLD);
+			.withStyle(ChatFormatting.GOLD);
 
 	private TerritoryBattleGuideText() {
 		return;
@@ -27,7 +27,7 @@ public final class TerritoryBattleGuideText {
 	public static ElementHolder createElementHolder() {
 		TextDisplayElement element = new TextDisplayElement(TEXT);
 
-		element.setBillboardMode(BillboardMode.CENTER);
+		element.setBillboardMode(BillboardConstraints.CENTER);
 		element.setLineWidth(350);
 		element.setInvisible(true);
 

@@ -4,7 +4,7 @@ import it.unimi.dsi.fastutil.longs.LongIterable;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
 public final class EnclosureResult implements LongIterable {
 	private final LongSet positions = new LongOpenHashSet();

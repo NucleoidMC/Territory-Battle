@@ -14,23 +14,23 @@ import io.github.haykam821.territorybattle.game.TerritoryBattleConfig;
 import io.github.haykam821.territorybattle.game.TerritoryBattleSidebar;
 import io.github.haykam821.territorybattle.game.map.TerritoryBattleMap;
 import io.github.haykam821.territorybattle.game.map.TerritoryBattleMapConfig;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.boss.BossBar;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.registry.entry.RegistryEntryList;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameMode;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.HolderSet;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.GameType;
 import xyz.nucleoid.plasmid.api.game.GameActivity;
 import xyz.nucleoid.plasmid.api.game.GameCloseReason;
 import xyz.nucleoid.plasmid.api.game.GameSpace;
@@ -56,7 +56,7 @@ public class TerritoryBattleActivePhase {
 
 	private static final int INTERPOLATION_STEPS = 30;
 
-	private final ServerWorld world;
+	private final ServerLevel level;
 	private final GameSpace gameSpace;
 	private final TerritoryBattleMap map;
 	private final TerritoryBattleConfig config;
@@ -69,19 +69,19 @@ public class TerritoryBattleActivePhase {
 	private int guideTicksLeft = 0;
 	private int ticksUntilClose = -1;
 
-	public TerritoryBattleActivePhase(GameSpace gameSpace, ServerWorld world, TerritoryBattleMap map, TerritoryBattleConfig config, HolderAttachment guideText, List<PlayerTerritory> territories, GlobalWidgets widgets) {
-		this.world = world;
+	public TerritoryBattleActivePhase(GameSpace gameSpace, ServerLevel level, TerritoryBattleMap map, TerritoryBattleConfig config, HolderAttachment guideText, List<PlayerTerritory> territories, GlobalWidgets widgets) {
+		this.level = level;
 		this.gameSpace = gameSpace;
 		this.map = map;
 		this.config = config;
 		this.guideText = guideText;
 		this.territories = territories;
-		this.guideTicksLeft = this.config.getGuideTicks().get(this.world.getRandom());
+		this.guideTicksLeft = this.config.getGuideTicks().sample(this.level.getRandom());
 		this.ticksLeft = this.config.getTime();
 		this.availableTerritory = this.config.getMapConfig().x * this.config.getMapConfig().z;
 
-		Text timerTitle = Text.literal("Territory Battle");
-		this.timerBar = widgets.addBossBar(timerTitle, BossBar.Color.BLUE, BossBar.Style.PROGRESS);
+		Component timerTitle = Component.literal("Territory Battle");
+		this.timerBar = widgets.addBossBar(timerTitle, BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
 		this.sidebar = new TerritoryBattleSidebar(widgets, this, timerTitle);
 	}
 
@@ -94,7 +94,7 @@ public class TerritoryBattleActivePhase {
 		activity.deny(GameRuleType.THROW_ITEMS);
 	}
 
-	private static List<PlayerTerritory> getTerritories(Iterable<ServerPlayerEntity> players, RegistryEntryList<Block> platformBlocks) {
+	private static List<PlayerTerritory> getTerritories(Iterable<ServerPlayer> players, HolderSet<Block> platformBlocks) {
 		List<PlayerTerritory> territories = Lists.newArrayList();
 
 		if (platformBlocks.size() == 0) {
@@ -102,10 +102,10 @@ public class TerritoryBattleActivePhase {
 		}
 
 		int index = 0;
-		for (PlayerEntity player : players) {
+		for (Player player : players) {
 			Block platformBlock = platformBlocks.get(index).value();
 
-			territories.add(new PlayerTerritory(PlayerRef.of(player), platformBlock.getDefaultState()));
+			territories.add(new PlayerTerritory(PlayerRef.of(player), platformBlock.defaultBlockState()));
 
 			index += 1;
 			if (index >= platformBlocks.size()) {
@@ -116,13 +116,13 @@ public class TerritoryBattleActivePhase {
 		return territories;
 	}
 
-	public static void open(GameSpace gameSpace, ServerWorld world, TerritoryBattleMap map, TerritoryBattleConfig config, HolderAttachment guideText) {
+	public static void open(GameSpace gameSpace, ServerLevel level, TerritoryBattleMap map, TerritoryBattleConfig config, HolderAttachment guideText) {
 		gameSpace.setActivity(activity -> {
 			GlobalWidgets widgets = GlobalWidgets.addTo(activity);
 
 			List<PlayerTerritory> territories = TerritoryBattleActivePhase.getTerritories(gameSpace.getPlayers().participants(), config.getPlayerBlocks());
 
-			TerritoryBattleActivePhase phase = new TerritoryBattleActivePhase(gameSpace, world, map, config, guideText, territories, widgets);
+			TerritoryBattleActivePhase phase = new TerritoryBattleActivePhase(gameSpace, level, map, config, guideText, territories, widgets);
 
 			TerritoryBattleActivePhase.setRules(activity);
 
@@ -149,23 +149,23 @@ public class TerritoryBattleActivePhase {
 		double distance = this.getDistance();
 		for (int i = 0; i < this.territories.size(); i++) {
 			PlayerTerritory territory = this.territories.get(i);
-			ServerPlayerEntity player = territory.getPlayerRef().getEntity(this.world);
+			ServerPlayer player = territory.getPlayerRef().getEntity(this.level);
 			if (player != null) {
-				player.getInventory().clear();
+				player.getInventory().clearContent();
 				territory.giveTerritoryStack(player);
 
-				player.changeGameMode(GameMode.ADVENTURE);
+				player.setGameMode(GameType.ADVENTURE);
 
 				double theta = ((double) i / this.territories.size()) * 2 * Math.PI;
 				this.spawn(player, theta, distance);
 
-				this.world.setBlockState(player.getBlockPos().down(), territory.getTerritoryState());
+				this.level.setBlockAndUpdate(player.blockPosition().below(), territory.getTerritoryState());
 				this.availableTerritory -= 1;
 			}
 		}
 
-		for (ServerPlayerEntity player : this.gameSpace.getPlayers().spectators()) {
-			TerritoryBattleWaitingPhase.spawn(this.world, this.map, player);
+		for (ServerPlayer player : this.gameSpace.getPlayers().spectators()) {
+			TerritoryBattleWaitingPhase.spawn(this.level, this.map, player);
 			this.setSpectator(player);
 		}
 
@@ -174,7 +174,7 @@ public class TerritoryBattleActivePhase {
 
 	private boolean isNextToState(BlockPos pos, BlockState state) {
 		for (Direction direction : NEXT_TO_DIRECTIONS) {
-			if (this.world.getBlockState(pos.offset(direction)) == state) {
+			if (this.level.getBlockState(pos.relative(direction)) == state) {
 				return true;
 			}
 		}
@@ -201,7 +201,7 @@ public class TerritoryBattleActivePhase {
 
 		boolean territoryUpdated = false;
 		for (PlayerTerritory territory : this.territories) {
-			ServerPlayerEntity player = territory.getPlayerRef().getEntity(this.world);
+			ServerPlayer player = territory.getPlayerRef().getEntity(this.level);
 
 			if (player != null && this.tickTerritory(territory, player)) {
 				territoryUpdated = true;
@@ -218,30 +218,30 @@ public class TerritoryBattleActivePhase {
  		this.timerBar.setProgress(this.ticksLeft / (float) this.config.getTime());
 		if (this.ticksLeft == 0 || this.availableTerritory <= 0) {
 			this.gameSpace.getPlayers().sendMessage(this.getEndingMessage());
-
-			this.ticksUntilClose = this.config.getTicksUntilClose().get(this.world.getRandom());
+			this.gameSpace.getPlayers().playSound(SoundEvents.PLAYER_LEVELUP, SoundSource.UI, 1, 1);
+			this.ticksUntilClose = this.config.getTicksUntilClose().sample(this.level.getRandom());
 		}
 	}
 
-	private boolean tickTerritory(PlayerTerritory territory, ServerPlayerEntity player) {
+	private boolean tickTerritory(PlayerTerritory territory, ServerPlayer player) {
 		boolean territoryUpdated = false;
 
-		Vec3d start = new Vec3d(player.lastX, player.lastY - MathHelper.EPSILON, player.lastZ);
-		Vec3d end = territory.getPreviousPos(player).subtract(0, MathHelper.EPSILON, 0);
+		Vec3 start = new Vec3(player.xo, player.yo - Mth.EPSILON, player.zo);
+		Vec3 end = territory.getPreviousPos(player).subtract(0, Mth.EPSILON, 0);
 
 		if (!start.equals(end)) {
-			double relativeX = end.getX() - start.getX();
-			double relativeY = end.getY() - start.getY();
-			double relativeZ = end.getZ() - start.getZ();
+			double relativeX = end.x() - start.x();
+			double relativeY = end.y() - start.y();
+			double relativeZ = end.z() - start.z();
 
-			BlockPos.Mutable steppingPos = new BlockPos.Mutable();
+			BlockPos.MutableBlockPos steppingPos = new BlockPos.MutableBlockPos();
 
 			for (int step = 1; step <= INTERPOLATION_STEPS; step += 1) {
 				double progress = step / (double) INTERPOLATION_STEPS;
 
-				steppingPos.setX((int) (start.getX() + relativeX * progress));
-				steppingPos.setY((int) (start.getY() + relativeY * progress));
-				steppingPos.setZ((int) (start.getZ() + relativeZ * progress));
+				steppingPos.setX((int) (start.x() + relativeX * progress));
+				steppingPos.setY((int) (start.y() + relativeY * progress));
+				steppingPos.setZ((int) (start.z() + relativeZ * progress));
 
 				if (this.tickTerritoryAtPos(territory, player, steppingPos)) {
 					territoryUpdated = true;
@@ -252,8 +252,8 @@ public class TerritoryBattleActivePhase {
 		return territoryUpdated;
 	}
 
-	private boolean tickTerritoryAtPos(PlayerTerritory territory, ServerPlayerEntity player, BlockPos steppingPos) {
-		BlockState state = this.world.getBlockState(steppingPos);
+	private boolean tickTerritoryAtPos(PlayerTerritory territory, ServerPlayer player, BlockPos steppingPos) {
+		BlockState state = this.level.getBlockState(steppingPos);
 		BlockState floorState = this.config.getMapConfig().getFloor();
 		if (state != floorState) return false;
 
@@ -263,11 +263,11 @@ public class TerritoryBattleActivePhase {
 		this.placeTerritory(steppingPos, territory, 0.5f);
 
 		if (this.config.shouldFloodFill()) {
-			BlockPos.Mutable enclosedPos = new BlockPos.Mutable();
+			BlockPos.MutableBlockPos enclosedPos = new BlockPos.MutableBlockPos();
 
 			for (Direction direction : NEXT_TO_DIRECTIONS) {
-				BlockPos enclosablePos = steppingPos.offset(direction);
-				EnclosureResult result = EnclosureTraversal.findEnclosure(this.world, enclosablePos, this.map.getTerritoryBounds(), territoryState, floorState);
+				BlockPos enclosablePos = steppingPos.relative(direction);
+				EnclosureResult result = EnclosureTraversal.findEnclosure(this.level, enclosablePos, this.map.getTerritoryBounds(), territoryState, floorState);
 
 				for (long pos : result) {
 					enclosedPos.set(pos);
@@ -280,54 +280,54 @@ public class TerritoryBattleActivePhase {
 	}
 
 	private void placeTerritory(BlockPos pos, PlayerTerritory territory, float volume) {
-		this.world.setBlockState(pos, territory.getTerritoryState());
-		this.world.playSound(null, pos, SoundEvents.BLOCK_SNOW_PLACE, SoundCategory.BLOCKS, volume, 1);
+		this.level.setBlockAndUpdate(pos, territory.getTerritoryState());
+		this.level.playSound(null, pos, SoundEvents.SNOW_PLACE, SoundSource.BLOCKS, volume, 1);
 
 		territory.incrementSize();
 		this.availableTerritory -= 1;
 	}
 
-	private Text getEndingMessage() {
+	private Component getEndingMessage() {
 		if (this.territories.size() == 0) {
-			return Text.literal("Nobody won the game!").formatted(Formatting.RED);
+			return Component.literal("Nobody won the game!").withStyle(ChatFormatting.RED);
 		}
 
 		List<PlayerTerritory> sortedTerritories = this.territories.stream().sorted().collect(Collectors.toList());
 		PlayerTerritory winnerTerritory = sortedTerritories.get(sortedTerritories.size() - 1);
-		return winnerTerritory.getWinMessage(this.world);
+		return winnerTerritory.getWinMessage(this.level);
 	}
 
 	private boolean isGameEnding() {
 		return this.ticksUntilClose >= 0;
 	}
 
-	private void setSpectator(ServerPlayerEntity player) {
-		player.changeGameMode(GameMode.SPECTATOR);
+	private void setSpectator(ServerPlayer player) {
+		player.setGameMode(GameType.SPECTATOR);
 	}
 
 	private JoinAcceptorResult onAcceptPlayers(JoinAcceptor acceptor) {
-		return acceptor.teleport(this.world, this.map.getWaitingSpawnPos()).thenRunForEach(player -> {
+		return acceptor.teleport(this.level, this.map.getWaitingSpawnPos()).thenRunForEach(player -> {
 			this.setSpectator(player);
 		});
 	}
 
-	private EventResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
+	private EventResult onPlayerDeath(ServerPlayer player, DamageSource source) {
 		// Respawn player
-		TerritoryBattleWaitingPhase.spawn(this.world, this.map, player);
+		TerritoryBattleWaitingPhase.spawn(this.level, this.map, player);
 		return EventResult.ALLOW;
 	}
 
-	public void spawn(ServerPlayerEntity player, double theta, double distance) {
-		Vec3d center = map.getPlatform().center();
+	public void spawn(ServerPlayer player, double theta, double distance) {
+		Vec3 center = map.getPlatform().center();
 
-		double x = center.getX() + Math.sin(theta) * distance;
-		double z = center.getZ() - Math.cos(theta) * distance;
+		double x = center.x() + Math.sin(theta) * distance;
+		double z = center.z() - Math.cos(theta) * distance;
 
-		player.teleport(this.world, Math.floor(x) + 0.5, 1, Math.floor(z) + 0.5, Set.of(), (float) Math.toDegrees(theta), 0, true);
+		player.teleportTo(this.level, Math.floor(x) + 0.5, 1, Math.floor(z) + 0.5, Set.of(), (float) Math.toDegrees(theta), 0, true);
 	}
 
-	public ServerWorld getWorld() {
-		return this.world;
+	public ServerLevel getLevel() {
+		return this.level;
 	}
 
 	public List<PlayerTerritory> getTerritories() {
